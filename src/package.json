@@ -1,0 +1,28 @@
+{
+    "author" : "Siddharth Trehan",
+    "name" : "node-thing",
+    "description" : "A centralized way to handle communication between devices for Internet of Things applications",
+    "version" : "0.0.1",
+    "repository" : {
+        "type" : "git",
+        "url" : ""
+    },
+    "dependencies" : {
+        "mongodb" : "~2.0",
+        "mongo-oplog" : "~0.1.6",
+        "log4js" : "~0.6",
+        "events" : "~1.0"
+    },
+    "keywords" : [
+        "things"
+    ],
+    "main" : "./lib/thing",
+    "bin" : {
+        "thing" : "./lib/thing"
+    },
+    "devDependencies" : {},
+    "optionalDependencies" : {},
+    "engines" : {
+        "node" : "*"
+    }
+}
