@@ -20,7 +20,7 @@ exports.objects = {
     db : null,                                          // database object used to run queries
     event_emitter : null,                               // event emitter used to handle queries on the thing
     device_queries_collection : null,                   // collection object used to run queries on device queries collection
-    device_status_collection : null,                    // collection object used to run queries on device status collection
+    device_status_collection : null                     // collection object used to run queries on device status collection
 };
 
 
