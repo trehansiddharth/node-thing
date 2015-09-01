@@ -10,7 +10,7 @@ var mongo   = require("mongodb"),                       // to store updates from
 exports.configuration = {
     mongoUri : null,                                    // URI to identify the MongoDB database server where all data lives
     databaseName : null,                                // name of the database on the server where queries and status data live
-    oplogName : null,                                   // name of the database on the server where the oplogs live
+    oplogName : "local",                                // name of the database on the server where the oplogs live
     thingName : null,                                   // name of the thing being handled
     queries_suffix : "_queries",                        // suffix to append to device name to get name of queries collection
     status_suffix : "_status"                           // suffix to append to device name to get name of status collection
@@ -119,6 +119,7 @@ exports.start = function (callback) {
                     }
                 });
             });
+            callback(null);
         }
     });
 };
@@ -141,17 +142,13 @@ exports.updateStatus = function (property, value, callback) {
 exports.onQuery = function (query, callback) {
     validateStarted(function () {
         exports.objects.event_emitter.on(query, function (query_arguments) {
-            var fullArguments = query_arguments.concat(function (err, result) {
-                if (err) {
-                    logger.error("Error while computing result for query %s on thing %s.", query, thingName);
-                } else {
-                    var update = { result : result, waiting : false };
-                    exports.objects.device_queries_collection.updateOne({ _id : data._id }, { $set : update }, { $upsert : true }, function (err) {
-                        if (err) {
-                            logger.error("Error while updating the device queries collection for query %s on thing %s.", query, thingName);
-                        }
-                    });
-                }
+            var fullArguments = query_arguments.concat(function (result) {
+                var update = { result : result, waiting : false };
+                exports.objects.device_queries_collection.updateOne({ _id : data._id }, { $set : update }, { $upsert : true }, function (err) {
+                    if (err) {
+                        logger.error("Error while updating the device queries collection for query %s on thing %s.", query, thingName);
+                    }
+                });
             })
             callback.apply(null, fullArguments);
         });
