@@ -1,9 +1,9 @@
 # node-thing
 
+node-thing is a node.js package that offers a centralized way to handle communication between devices for Internet of Things applications.
+
 Introduction
 ------------
-
-node-thing is a node.js that offers a centralized way to handle communication between devices for Internet of Things applications.
 
 node-thing is based on an Internet of Things architecture consisting of a central Mongo database and several devices that can connect to the database to report their status, receive queries, and send commands for other devices to process. This choice of highly centralized architecture makes it easy to add, remove, or update devices without worrying about which connections will have to be added or will be broken. Additionally, the use of MongoDB to store device data makes information updates and access fast, secure, reliable, and scalable.
 
