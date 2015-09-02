@@ -5,7 +5,7 @@ Introduction
 
 node-thing is a node.js that offers a centralized way to handle communication between devices for Internet of Things applications.
 
-The Internet of Things architecture that node-thing is based on consists of a central Mongo database and several devices that can connect to the database to report their status, receive queries, and send commands for other devices to process. This choice of highly centralized architecture makes it easy to add, remove, or update devices without worrying about which connections will have to be added or will be broken. Additionally, the use of MongoDB to store device data makes information updates and access fast, secure, reliable, and scalable.
+node-thing is based on an Internet of Things architecture consisting of a central Mongo database and several devices that can connect to the database to report their status, receive queries, and send commands for other devices to process. This choice of highly centralized architecture makes it easy to add, remove, or update devices without worrying about which connections will have to be added or will be broken. Additionally, the use of MongoDB to store device data makes information updates and access fast, secure, reliable, and scalable.
 
 node-thing classifies all interactions between devices as one of two types: the retrieval of information or the execution of commands and queries. There is overlap between these two categories where one device runs a query on another device to retrieve some information from it, but the difference lies in which device initiates the action -- in the former case, a device passively receives all information being published by another device, while in the latter, a device will initiate the query by specifying what information it wants or what action it wants executed. This device communcation model therefore consists of two parts:
 
@@ -116,11 +116,22 @@ Note: the name of the property does not necessarily have to be a string, it can 
 You can also get the status of your device that you have published by using `thing.getStatus()`:
 
 ```javascript
+// Get the entire status (fetch all properties)
+thing.getStatus(null, function (err, status) {
+    if (err) {
+        throw err;
+    } else {
+        console.log("The complete status is:");
+        console.log(status);
+    }
+});
+
+// Get the value of a specific property from the status
 thing.getStatus("property_name", function (err, value) {
     if (err) {
         throw err;
     } else {
-        console.log("The value of property_name is " + value);
+        console.log("The value of property_name is %s.", value);
     }
 });
 ```

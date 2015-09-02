@@ -26,7 +26,7 @@ exports.objects = {
 
 exports.configure = function (customConfiguration) {
     for (var attribute in customConfiguration) {
-        if (exports.configuration[attribute]) {
+        if (attribute in exports.configuration) {
             exports.configuration[attribute] = customConfiguration[attribute];
         } else {
             logger.warn("The attribute %s is not a configurable property.", attribute);
@@ -51,26 +51,28 @@ exports.connect = function (callback) {
     })
 };
 
-var getCollections = function (thingName, callback) {
+exports.getCollections = function (thingName, callback) {
     // Check to make sure thingName has been set
     if (thingName) {
         // Check to make sure a connection to the database has already been made
         if (exports.objects.db) {
             // Get the collection containing device queries
-            exports.objects.db.collection(thingName + exports.configuration.queries_suffix, function (err, device_queries_collection) {
+            var device_queries_name = thingName + exports.configuration.queries_suffix;
+            exports.objects.db.collection(device_queries_name, function (err, device_queries_collection) {
                 if (err) {
                     logger.error("Could not get the device_queries collection. Did you create the collection?");
-                    logger.error("Collection name: %s", thingName + exports.configuration.queries_suffix);
+                    logger.error("Collection name: %s", device_queries_name);
                     callback(err, null);
                 } else {
                     // Get the collection containing device status
-                    exports.objects.db.collection(thingName + exports.configuration.status_suffix, function (err, device_status_collection) {
+                    var device_status_name = thingName + exports.configuration.status_suffix;
+                    exports.objects.db.collection(device_status_name, function (err, device_status_collection) {
                         if (err) {
                             logger.error("Could not get the device_status collection. Did you create the collection?");
-                            logger.error("Collection name: %s", thingName + exports.configuration.status_suffix);
+                            logger.error("Collection name: %s", device_status_name);
                             callback(err, null);
                         } else {
-                            callback(null, thingName, device_queries_collection, device_status_collection)
+                            callback(null, device_queries_collection, device_status_collection);
                         }
                     });
                 }
@@ -88,10 +90,14 @@ var getCollections = function (thingName, callback) {
 exports.start = function (callback) {
     // Get the queries and updates collections for the thing
     var thingName = exports.configuration.thingName;
-    getCollections(thingName, function (err, device_queries_collection, device_status_collection) {
+    exports.getCollections(thingName, function (err, device_queries_collection, device_status_collection) {
         if (err) {
             callback(err, null);
         } else {
+            // Save the collections into exports.objects
+            exports.objects.device_queries_collection = device_queries_collection;
+            exports.objects.device_status_collection = device_status_collection;
+
             // Create a new event emitter to handle events for the thing
             exports.objects.event_emitter = new events.EventEmitter();
 
@@ -104,7 +110,7 @@ exports.start = function (callback) {
             device_queries_oplog.on("insert", function (data) {
                 var query = data.o;
                 if (data.o.waiting) {
-                    exports.objects.event_emitter.emit(query.query, query.arguments);
+                    exports.objects.event_emitter.emit(query.query, query._id, query.arguments);
                 }
             });
             device_queries_oplog.on("update", function (data) {
@@ -114,7 +120,7 @@ exports.start = function (callback) {
                         logger.error("Update event from oplog does not correspond to an existing document.");
                     } else {
                         if (query.waiting) {
-                            exports.objects.event_emitter.emit(query.query, query.arguments);
+                            exports.objects.event_emitter.emit(query.query, id, query.arguments);
                         }
                     }
                 });
@@ -124,7 +130,7 @@ exports.start = function (callback) {
     });
 };
 
-var validateStarted = function (callback) {
+exports.validateStarted = function (callback) {
     if (exports.objects.event_emitter && exports.objects.device_queries_collection && exports.objects.device_status_collection){
         callback();
     } else {
@@ -133,18 +139,28 @@ var validateStarted = function (callback) {
 };
 
 exports.updateStatus = function (property, value, callback) {
-    validateStarted(function () {
-        var update = { value : value };
-        exports.objects.device_status_collection.updateMany({ property : property } , { $set : update }, { $upsert : true }, callback);
+    exports.validateStarted(function () {
+        exports.objects.device_status_collection.findOne({ property : property }, function (err, result) {
+            if (err) {
+                logger.error("Error while trying to access collection for updating.");
+                callback(err, null);
+            } else if (result) {
+                var update = { value : value };
+                exports.objects.device_status_collection.updateMany({ property : property }, { $set : update }, callback);
+            } else {
+                var document = { property : property, value : value };
+                exports.objects.device_status_collection.insert(document, callback);
+            }
+        })
     });
 };
 
 exports.onQuery = function (query, callback) {
-    validateStarted(function () {
-        exports.objects.event_emitter.on(query, function (query_arguments) {
+    exports.validateStarted(function () {
+        exports.objects.event_emitter.on(query, function (id, query_arguments) {
             var fullArguments = query_arguments.concat(function (result) {
                 var update = { result : result, waiting : false };
-                exports.objects.device_queries_collection.updateOne({ _id : data._id }, { $set : update }, { $upsert : true }, function (err) {
+                exports.objects.device_queries_collection.updateOne({ _id : id }, { $set : update }, { $upsert : true }, function (err) {
                     if (err) {
                         logger.error("Error while updating the device queries collection for query %s on thing %s.", query, thingName);
                     }
@@ -156,7 +172,7 @@ exports.onQuery = function (query, callback) {
 };
 
 exports.getStatus = function (property, callback) {
-    validateStarted(function () {
+    exports.validateStarted(function () {
         if (property) {
             exports.objects.device_status_collection.findOne({ property : property }, function (err, data) {
                 if (err) {
@@ -181,12 +197,12 @@ exports.getStatus = function (property, callback) {
 
 exports.sentinel = function (sentinelName, callback) {
     // Get the queries and updates collections for the sentinel
-    getCollections(sentinelName, function (err, device_queries_collection, device_status_collection) {
+    exports.getCollections(sentinelName, function (err, device_queries_collection, device_status_collection) {
         if (err) {
             callback(err, null);
         } else {
             // Create a sentinel object to store information about the thing being connected to
-            sentinel = {
+            var sentinel = {
                 device_queries_collection : device_queries_collection,
                 device_status_collection : device_status_collection
             }
@@ -229,11 +245,11 @@ exports.sentinel = function (sentinelName, callback) {
             });
             device_status_oplog.on("update", function (data) {
                 var id = data.o2._id;
-                sentinel.device_queries_collection.findOne({ _id : id }, function (err, item) {
-                    if (err) {
+                sentinel.device_status_collection.findOne({ _id : id }, function (err, item) {
+                    if (err || !item) {
                         logger.error("Update event from oplog does not correspond to an existing document.");
                     } else {
-                        sentinel.event_emitter.emit("status_" + item._id, item.value);
+                        sentinel.event_emitter.emit("status_" + id, item.value);
                     }
                 });
             });
@@ -244,6 +260,8 @@ exports.sentinel = function (sentinelName, callback) {
                 var query = {};
                 query.query = args[0];
                 query.arguments = args.slice(1, args.length - 1);
+                query.waiting = true;
+                query.result = null;
                 var callback = args[args.length - 1];
                 sentinel.device_queries_collection.insert(query, function (err, result) {
                     if (err) {
