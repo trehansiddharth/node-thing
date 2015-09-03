@@ -2,7 +2,7 @@
     "author" : "Siddharth Trehan",
     "name" : "node-thing",
     "description" : "A centralized way to handle communication between devices for Internet of Things applications",
-    "version" : "0.1.0",
+    "version" : "0.1.2",
     "repository" : {
         "type" : "git",
         "url" : "https://github.com/trehansiddharth/node-thing"

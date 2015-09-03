@@ -243,7 +243,7 @@ exports.sentinel = function (sentinelName, callback) {
             device_status_oplog.on("insert", function (data) {
                 var item = data.o;
                 sentinel.event_emitter.emit("status_" + item._id, item.value);
-                sentinel.event_emitter.emit("new", item);
+                sentinel.event_emitter.emit("new_or_updated", item);
             });
             device_status_oplog.on("update", function (data) {
                 var id = data.o2._id;
@@ -252,6 +252,7 @@ exports.sentinel = function (sentinelName, callback) {
                         logger.error("Update event from oplog does not correspond to an existing document.");
                     } else {
                         sentinel.event_emitter.emit("status_" + id, item.value);
+                        sentinel.event_emitter.emit("new_or_updated", item);
                     }
                 });
             });
@@ -313,7 +314,7 @@ exports.sentinel = function (sentinelName, callback) {
                         }
                     });
                 } else {
-                    sentinel.event_emitter.on("new", function (item) {
+                    sentinel.event_emitter.on("new_or_updated", function (item) {
                         callback(item.property, item.value);
                     });
                 }
