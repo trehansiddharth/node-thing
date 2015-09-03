@@ -178,6 +178,8 @@ exports.getStatus = function (property, callback) {
                 if (err) {
                     logger.error("Error getting the status for property %s. Most likely this property does not exist.", property);
                     callback(err, null);
+                } else if (!data) {
+                    callback(null, null)
                 } else {
                     callback(null, data.value);
                 }
@@ -282,6 +284,8 @@ exports.sentinel = function (sentinelName, callback) {
                         if (err) {
                             logger.error("Error getting the status for property %s. Most likely this property does not exist.", property);
                             callback(err, null);
+                        } else if (!data) {
+                            callback(null, null);
                         } else {
                             callback(null, data.value);
                         }
