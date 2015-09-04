@@ -145,13 +145,13 @@ exports.updateStatus = function (property, value, callback) {
                 logger.error("Error while trying to access collection for updating.");
                 callback(err, null);
             } else if (result) {
-                var update = { value : value };
+                var update = { value : value, lastModified : new Date() };
                 exports.objects.device_status_collection.updateMany({ property : property }, { $set : update }, callback);
             } else {
-                var document = { property : property, value : value };
+                var document = { property : property, value : value, lastModified: new Date() };
                 exports.objects.device_status_collection.insert(document, callback);
             }
-        })
+        });
     });
 };
 
@@ -159,7 +159,7 @@ exports.onQuery = function (query, callback) {
     exports.validateStarted(function () {
         exports.objects.event_emitter.on(query, function (id, query_arguments) {
             var fullArguments = query_arguments.concat(function (result) {
-                var update = { result : result, waiting : false };
+                var update = { result : result, waiting : false, lastModified : new Date() };
                 exports.objects.device_queries_collection.updateOne({ _id : id }, { $set : update }, { $upsert : true }, function (err) {
                     if (err) {
                         logger.error("Error while updating the device queries collection for query %s on thing %s.", query, thingName);
@@ -265,6 +265,7 @@ exports.sentinel = function (sentinelName, callback) {
                 query.arguments = args.slice(1, args.length - 1);
                 query.waiting = true;
                 query.result = null;
+                query.lastModified = new Date();
                 var callback = args[args.length - 1];
                 sentinel.device_queries_collection.insert(query, function (err, result) {
                     if (err) {
